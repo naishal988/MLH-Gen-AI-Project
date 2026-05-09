@@ -1,17 +1,26 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import requests  # <-- Direct web request
+import requests
 import json
 import sqlite3
+import os
+from dotenv import load_dotenv
 
-# Flask app aur CORS setup karna
+# .env file se hidden variables load karna
+load_dotenv()
+
+# API Key ko safe tarike se nikalna
+API_KEY = os.getenv("API_KEY")
+
+# Agar API key miss ho gayi, toh server start hote hi bata dega
+if API_KEY:
+    print("✅ Success: API Key securely load ho gayi hai!")
+else:
+    print("❌ FATAL ERROR: API_KEY nahi mili. Apni .env file check karo!")
+
+# Flask app aur CORS setup
 app = Flask(__name__)
 CORS(app)
-
-# ==========================================
-# 🛑 SECURITY WARNING: Yahan apni GROQ API KEY daalna
-# ==========================================
-GROQ_API_KEY = "YOUR_API_KEY"
 
 # --- DATABASE SETUP ---
 def init_db():
@@ -30,7 +39,7 @@ def init_db():
     conn.commit()
     conn.close()
 
-# App start hone se pehle database check/create karna
+# App start hone se pehle database setup
 init_db()
 
 
@@ -43,84 +52,90 @@ def scan_url():
     if not url_to_test:
         return jsonify({"error": "Bhai, URL bhejna bhool gaye!"}), 400
 
-    # Llama 3.1 ke liye SUPER STRICT prompt (Advanced Pattern Matching)
+    # Llama 3.1 ke liye SUPER STRICT prompt 
     prompt = f"""
-    Analyze this URL: {url_to_test}
-    You must flag the URL as phishing if it shows any of these signs:
-    1. Typosquatting (e.g., g00gle.com instead of google.com).
-    2. Brand Impersonation (e.g., playimdb.com, netflix-free-update.com, secure-paypal-login.com).
-    3. Suspicious keywords like 'free', 'winner', 'claim', 'update', 'play' attached to popular brand names.
-    4. Unusually long strings or weird subdomains.
+    Analyze this exact URL: {url_to_test}
+    You are a hyper-paranoid cybersecurity expert. You MUST flag the URL as phishing (is_phishing: true) if it shows ANY of these signs:
+    1. Brand Impersonation: Uses famous brand names with extra words (e.g., playimdb.com, netflix-update.com, amazon-free.com). The real IMDB is ONLY imdb.com.
+    2. Typosquatting: Looks like a real site but has slight typos (e.g., g00gle.com, faceb00k.com).
+    3. Suspicious keywords: Contains words like 'free', 'claim', 'winner', 'update', 'login' in the domain.
+    
+    If it is a clean, well-known, official domain (like exactly https://www.google.com), flag it as safe.
     
     Respond ONLY in valid JSON format exactly like this:
     {{"is_phishing": true or false, "threat_level": "Low/Medium/High", "reason": "Short explanation in English why it is safe or unsafe"}}
     """
 
     try:
-        # 🚀 THE ULTIMATE FIX: Using stable Groq API with Llama-3.1
         api_url = "https://api.groq.com/openai/v1/chat/completions"
         
         headers = {
-            "Authorization": f"Bearer {GROQ_API_KEY}",
+            "Authorization": f"Bearer {API_KEY}",
             "Content-Type": "application/json"
         }
         
-        # Groq payload with JSON forcing aur NAYA MODEL
         payload = {
-            "model": "llama-3.1-8b-instant", # Naya super fast and smart model
+            "model": "llama-3.1-8b-instant",
             "messages": [
                 {
                     "role": "system", 
-                    "content": "You are a hyper-paranoid cybersecurity expert analyzing links for a Hackathon project. If a domain mimics a popular brand but isn't the exact official domain, flag it as phishing. Output only JSON."
+                    "content": "You are a cybersecurity AI. Output ONLY valid JSON. No markdown, no extra text."
                 },
                 {"role": "user", "content": prompt}
             ],
-            "response_format": {"type": "json_object"} # Force valid JSON
+            "response_format": {"type": "json_object"}
         }
         
-        # Direct Groq Server par hit marna
         response = requests.post(api_url, headers=headers, json=payload)
         response_data = response.json()
 
-        # Error handling for invalid API keys or limits
         if "error" in response_data:
             return jsonify({"error": "Groq API Error", "details": response_data["error"]}), 500
 
-        # AI ka exact text nikalna
         ai_text = response_data['choices'][0]['message']['content']
-        
-        # Parse the JSON response
         result_json = json.loads(ai_text)
 
-        # Ensure we always have these keys
         is_phishing = result_json.get('is_phishing', False)
         threat_level = result_json.get('threat_level', 'Unknown')
         reason = result_json.get('reason', 'No reason provided by AI.')
 
-        # Result ko apne Database mein save karna
+        # --- NAYA DATABASE LOGIC (No Duplicates) ---
         conn = sqlite3.connect('database.db')
         cursor = conn.cursor()
-        cursor.execute(
-            'INSERT INTO scans (url, is_phishing, threat_level, reason) VALUES (?, ?, ?, ?)',
-            (url_to_test, is_phishing, threat_level, reason)
-        )
+        
+        # Check karna ki URL pehle se database mein hai ya nahi
+        cursor.execute('SELECT id FROM scans WHERE url = ?', (url_to_test,))
+        existing_record = cursor.fetchone()
+
+        if existing_record:
+            # Agar pehle se hai, toh sirf details update karo (Duplicate nahi banega)
+            cursor.execute('''
+                UPDATE scans 
+                SET is_phishing = ?, threat_level = ?, reason = ?, timestamp = CURRENT_TIMESTAMP
+                WHERE url = ?
+            ''', (is_phishing, threat_level, reason, url_to_test))
+        else:
+            # Agar naya URL hai, toh naya record insert karo
+            cursor.execute('''
+                INSERT INTO scans (url, is_phishing, threat_level, reason) 
+                VALUES (?, ?, ?, ?)
+            ''', (url_to_test, is_phishing, threat_level, reason))
+            
         conn.commit()
         conn.close()
 
-        # Sruthika ke frontend ko answer wapas bhejna
+        # Frontend (Sruthika) ko answer bhejna
         return jsonify({
             "is_phishing": is_phishing,
             "threat_level": threat_level,
             "reason": reason
         })
         
-    except json.JSONDecodeError as je:
-         return jsonify({"error": "AI response was not valid JSON", "details": str(je), "raw_response": ai_text}), 500
     except Exception as e:
         return jsonify({"error": str(e), "status": "failed"}), 500
 
 
-# --- API 2: DASHBOARD STATS ENDPOINT (PRO FEATURE) ---
+# --- API 2: DASHBOARD STATS ENDPOINT ---
 @app.route('/api/stats', methods=['GET'])
 def get_stats():
     try:
