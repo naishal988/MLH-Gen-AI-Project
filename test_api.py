@@ -1,47 +1,81 @@
 import requests
 import json
+import textwrap
 
 BASE_URL = "http://127.0.0.1:5000"
 
-print("="*50)
-print("🚀 WELCOME TO PHISHING DETECTOR TERMINAL")
-print("="*50)
+def print_header(title):
+    print("\n" + "="*60)
+    print(f"🚀 {title.upper()}")
+    print("="*60)
+
+print_header("WELCOME TO ADVANCED PHISHING DETECTOR")
+print("Press 1: Scan a URL")
+print("Press 2: Scan an Email Text")
+print("Press 3: View Dashboard Stats")
+print("Press Q: Quit")
 
 while True:
-    print("\n" + "-"*50)
-    # USER SE DYNAMIC INPUT LENA
-    user_url = input("👉 Enter URL to scan (or type 'q' to quit, 's' for stats): ").strip()
+    print("\n" + "-"*60)
+    choice = input("👉 Enter your choice (1/2/3/Q): ").strip().upper()
 
-    if user_url.lower() == 'q':
+    if choice == 'Q':
         print("Exiting scanner. Good luck for the MLH event!")
         break
         
-    elif user_url.lower() == 's':
-        # Dashboard Stats check karna
+    elif choice == '3':
         print("\n📊 FETCHING DASHBOARD STATS...")
         try:
             res_stats = requests.get(f"{BASE_URL}/api/stats")
             if res_stats.status_code == 200:
-                print(json.dumps(res_stats.json(), indent=4))
+                data = res_stats.json()
+                print(f"Total Scans: {data['total_scans']} | Safe: {data['safe_links']} | Phishing: {data['phishing_links']}")
+                print(f"🌟 {data['credits']} 🌟")
             else:
                 print(f"Stats Error: {res_stats.text}")
         except Exception as e:
             print("Error connecting to server. Is app.py running?")
             
-    elif user_url != "":
-        # URL ko Backend par bhejna
-        print(f"⏳ Scanning: {user_url} ...")
-        payload = {"url_to_scan": user_url}
+    elif choice == '1':
+        user_url = input("🔗 Paste URL to scan: ").strip()
+        if user_url:
+            print(f"⏳ Scanning URL: {user_url} ...")
+            try:
+                res = requests.post(f"{BASE_URL}/api/scan", json={"url_to_scan": user_url})
+                if res.status_code == 200:
+                    result = res.json()
+                    print("\n✅ AI RESULT:")
+                    print(f"⚠️ Phishing: {result.get('is_phishing')}")
+                    print(f"🚨 Threat:   {result.get('threat_level')}")
+                    print(f"📝 Reason:   {textwrap.fill(result.get('reason'), width=55)}")
+                    print(f"\n🌟 {result.get('credits')} 🌟")
+                else:
+                    print(f"Error {res.status_code}: {res.text}")
+            except Exception as e:
+                print("Error connecting to backend.")
+
+    elif choice == '2':
+        print("✉️  Paste the email text below (Press Enter twice when done):")
+        lines = []
+        while True:
+            line = input()
+            if line == "":
+                break
+            lines.append(line)
+        email_text = "\n".join(lines)
         
-        try:
-            res = requests.post(f"{BASE_URL}/api/scan", json=payload)
-            if res.status_code == 200:
-                result = res.json()
-                print("\n✅ AI RESULT:")
-                print(f"Phishing: {result.get('is_phishing')}")
-                print(f"Threat:   {result.get('threat_level')}")
-                print(f"Reason:   {result.get('reason')}")
-            else:
-                print(f"Error {res.status_code}: {res.text}")
-        except Exception as e:
-            print("Error connecting to backend. Is app.py running?")
+        if email_text.strip():
+            print(f"⏳ Scanning Email Content...")
+            try:
+                res = requests.post(f"{BASE_URL}/api/scan-email", json={"email_text": email_text})
+                if res.status_code == 200:
+                    result = res.json()
+                    print("\n✅ AI RESULT:")
+                    print(f"⚠️ Phishing: {result.get('is_phishing')}")
+                    print(f"🚨 Threat:   {result.get('threat_level')}")
+                    print(f"📝 Reason:   {textwrap.fill(result.get('reason'), width=55)}")
+                    print(f"\n🌟 {result.get('credits')} 🌟")
+                else:
+                    print(f"Error {res.status_code}: {res.text}")
+            except Exception as e:
+                print("Error connecting to backend.")
