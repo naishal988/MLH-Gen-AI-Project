@@ -9,20 +9,16 @@ from dotenv import load_dotenv
 # .env file se hidden variables load karna
 load_dotenv()
 
-# API Key ko safe tarike se nikalna
 API_KEY = os.getenv("API_KEY")
 
-# Agar API key miss ho gayi, toh server start hote hi bata dega
 if API_KEY:
     print("✅ Success: API Key securely load ho gayi hai!")
 else:
     print("❌ FATAL ERROR: API_KEY nahi mili. Apni .env file check karo!")
 
-# Flask app aur CORS setup
 app = Flask(__name__)
 CORS(app)
 
-# Har API response ke end mein yeh add hoga
 PROJECT_CREDITS = "Made by Naishal (Backend Developer) & Sruthika (Frontend Developer)"
 
 # --- DATABASE SETUP ---
@@ -42,9 +38,7 @@ def init_db():
     conn.commit()
     conn.close()
 
-# App start hone se pehle database setup
 init_db()
-
 
 # ==========================================
 # API 1: URL SCANNER ENDPOINT
@@ -57,23 +51,25 @@ def scan_url():
     if not url_to_test:
         return jsonify({"error": "Bhai, URL bhejna bhool gaye!"}), 400
 
-    # 🚀 IMPROVED STRICT PROMPT (Added Govt Spoofing Rule)
+    # 🚀 SMART TIER-1 SOC PROMPT (Balances Zero-Trust with Common Sense)
     prompt = f"""
     Analyze this exact URL: {url_to_test}
-    You are an elite, Tier-1 SOC Threat Hunter and Cybersecurity Expert operating on a strict ZERO-TRUST policy. Your logic must be flawless. Do not hallucinate or assume legitimacy.
+    You are an elite, Tier-1 SOC Threat Hunter. You must balance strict ZERO-TRUST with logical common sense to avoid false positives on legitimate sites.
 
-    First, internally parse the URL into Subdomain, Root Domain, and TLD. 
+    First, internally parse the URL into Subdomain, Root Domain, TLD, and Path. IGNORE 'https://', 'http://', and 'www.'.
     
-    APPLY THESE GOD-LEVEL RULES STRICTLY:
-    1. ROOT DOMAIN IMPERSONATION (CRITICAL): The official root domain is the core identity. E.g., for IMDB, it is exactly 'imdb.com'. If the root domain merges the brand name with other words directly (e.g., 'playimdb.com', 'google-support.com', 'amazonfree.com'), it is 100% PHISHING. Real companies use subdomains (e.g., 'play.imdb.com'), NOT modified root domains.
-    2. GOVERNMENT SPOOFING (NO EXCEPTIONS): Any domain implying government services (words like gov, nra, yojana, excise, uidai, police) MUST end in exactly '.gov.in', '.nic.in', or '.gov'. If it uses '.in', '.com', '.online', '.org', it is a High-Threat SCAM.
-    3. FREE HOSTING & SCAM KEYWORDS: Domains on 'blogspot.com', 'wordpress.com', or using keywords like 'free', 'claim', 'winner', 'register', 'login' are SCAMS.
-    4. GIBBERISH/OBSCURE DOMAINS: If the root domain is a random string (e.g., 'sajks.com') or unverified acronyms (e.g., 'kvms.org.in'), flag it as phishing. Scammers use cheap domains. Do not assume it is a legitimate local business.
+    APPLY THESE EXPERT RULES STRICTLY:
+    1. LEGITIMATE SUBDOMAINS ARE SAFE: Official subdomains of massive global brands are SAFE. (e.g., 'web.whatsapp.com' is the official WhatsApp web client, 'drive.google.com' is safe). Do NOT flag legitimate subdomains as root domain impersonation.
+    2. EDUCATIONAL & INSTITUTIONAL EXCEPTION: Domains ending in strictly '.ac.in', '.edu', or '.edu.in' belong to legitimate universities and academic institutions (e.g., silveroakuni.ac.in). These are SAFE and highly trusted.
+    3. LOGIN PAGES ARE NORMAL ON REAL SITES: Having '/login', 'login.aspx', 'auth', or 'portal' in the URL path is 100% NORMAL and SAFE *IF* the root domain is a legitimate university, bank, or known service. Only flag 'login' keywords if the root domain itself is a cheap scam domain.
+    4. ROOT DOMAIN IMPERSONATION (CRITICAL THREAT): If the root domain merges a brand name with other words directly (e.g., 'playimdb.com', 'whatsapp-login-free.com'), it is 100% PHISHING.
+    5. GOVERNMENT SPOOFING: Any domain implying Indian government services (words like gov, nra, yojana) MUST end in exactly '.gov.in' or '.nic.in'. If it uses '.in', '.com', '.online', it is a High-Threat SCAM.
+    6. FREE HOSTING & GIBBERISH: Domains on 'blogspot.com' offering 'free' stuff, or domains with random unverified gibberish strings (e.g., 'sajks.com') are phishing.
     
-    DEVIATION RULE: Only output {{"is_phishing": false}} if the domain is EXACTLY a globally recognized, unmodified root domain (like exactly 'google.com', 'youtube.com'). If there is even 1% deviation, flag it as true.
+    Evaluate carefully: Is the root domain actually a known legitimate entity (like whatsapp.com or a valid university)? If yes, mark is_phishing as false.
 
     Respond ONLY in valid JSON format exactly like this:
-    {{"is_phishing": true or false, "threat_level": "Low/Medium/High", "reason": "Short, expert technical explanation of the specific threat vector identified (e.g., Root Domain Impersonation, Typosquatting)"}}
+    {{"is_phishing": true or false, "threat_level": "Low/Medium/High", "reason": "Short, expert technical explanation of the verdict"}}
     """
 
     try:
@@ -87,7 +83,7 @@ def scan_url():
                 {"role": "user", "content": prompt}
             ],
             "response_format": {"type": "json_object"},
-            "temperature": 0.0  # <-- AI creativity disabled for consistent answers
+            "temperature": 0.0  
         }
         
         response = requests.post(api_url, headers=headers, json=payload)
@@ -103,21 +99,13 @@ def scan_url():
         threat_level = result_json.get('threat_level', 'Unknown')
         reason = result_json.get('reason', 'No reason provided by AI.')
 
-        # Database No-Duplicate Logic
         conn = sqlite3.connect('database.db')
         cursor = conn.cursor()
         cursor.execute('SELECT id FROM scans WHERE url = ?', (url_to_test,))
         if cursor.fetchone():
-            cursor.execute('''
-                UPDATE scans 
-                SET is_phishing = ?, threat_level = ?, reason = ?, timestamp = CURRENT_TIMESTAMP 
-                WHERE url = ?
-            ''', (is_phishing, threat_level, reason, url_to_test))
+            cursor.execute('''UPDATE scans SET is_phishing = ?, threat_level = ?, reason = ?, timestamp = CURRENT_TIMESTAMP WHERE url = ?''', (is_phishing, threat_level, reason, url_to_test))
         else:
-            cursor.execute('''
-                INSERT INTO scans (url, is_phishing, threat_level, reason) 
-                VALUES (?, ?, ?, ?)
-            ''', (url_to_test, is_phishing, threat_level, reason))
+            cursor.execute('''INSERT INTO scans (url, is_phishing, threat_level, reason) VALUES (?, ?, ?, ?)''', (url_to_test, is_phishing, threat_level, reason))
         conn.commit()
         conn.close()
 
@@ -167,7 +155,7 @@ def scan_email():
                 {"role": "user", "content": prompt}
             ],
             "response_format": {"type": "json_object"},
-            "temperature": 0.0 # <-- Consistency for emails too
+            "temperature": 0.0
         }
         
         response = requests.post(api_url, headers=headers, json=payload)
