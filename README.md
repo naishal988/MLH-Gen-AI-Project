@@ -3,7 +3,7 @@
 An advanced, Zero-Trust Architecture based Phishing Detection Engine built for the **MLH Gen AI Hackathon**.
 
 ### 🌟 Live Demo
-https://serene-lily-ce5042.netlify.app/
+https://phishguard-ai-mlh.netlify.app/
 
 ### 🚀 Features
 * **Hyper-Paranoid Threat Hunting:** Detects root domain impersonation and typosquatting.
