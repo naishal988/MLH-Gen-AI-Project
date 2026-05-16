@@ -1,0 +1,13 @@
+// PhishGuard AI - Midnight Zero-Knowledge Smart Contract
+// This contract logs the threat status of a URL/Email without revealing the actual string.
+
+contract PhishGuardLedger {
+    // State variable: Maps the SHA-256 Hash of the data to its Phishing Status (True/False)
+    state scanRecords: Map<Bytes<32>, Boolean>;
+
+    // Exported circuit that allows our Python backend to securely add a scan record
+    export circuit logScan(dataHash: Bytes<32>, isPhishing: Boolean): [] {
+        // ZK Proof generation: Proving we scanned it without revealing the underlying data
+        scanRecords.insert(dataHash, isPhishing);
+    }
+}
