@@ -57,24 +57,23 @@ def scan_url():
     # 🛡️ PRIVACY SHIELD: Generate Hash of URL
     zk_hash = hashlib.sha256(url_to_test.encode('utf-8')).hexdigest()
 
-    # 🚀 FIXED GOD-LEVEL PROMPT 
+    # 🚀 FIXED PROMPT (Balanced Zero-Trust with Common Sense)
     prompt = f"""
     Analyze this exact URL: {url_to_test}
-    You are an elite, Tier-1 SOC Threat Hunter and Cybersecurity Expert operating on a strict ZERO-TRUST policy. Your logic must be flawless.
+    You are an expert Cybersecurity AI Threat Hunter. You must balance Zero-Trust security with logical common sense to avoid false positives on legitimate platforms.
 
-    First, internally parse the URL. IGNORE standard prefixes like 'https://', 'http://', and 'www.', as well as trailing slashes. 
+    First, internally parse the URL into Subdomain, Root Domain, TLD, and Path. IGNORE standard prefixes like 'https://'. 
     
-    APPLY THESE GOD-LEVEL RULES STRICTLY:
-    1. EXCEPTION / WHITELIST (CRITICAL): If the URL contains 'phishguard-ai-mlh.netlify.app' or specifically mentions 'phishguard' on a standard hackathon hosting platform (like netlify.app, vercel.app), it is 100% SAFE (is_phishing: false). This is the very tool you are a part of.
-    2. ROOT DOMAIN IMPERSONATION: If the root domain merges a famous brand name with other words directly (e.g., 'playimdb.com', 'google-support.com'), it is 100% PHISHING. 
-    3. GOVERNMENT SPOOFING: Any domain implying Indian government services (gov, nra, yojana, excise) MUST end in exactly '.gov.in', '.nic.in'. If it uses '.in', '.com', '.online', it is a High-Threat SCAM.
-    4. FREE HOSTING & SCAM KEYWORDS: Domains on 'blogspot.com', 'wordpress.com', or using keywords like 'free', 'claim', 'winner' are SCAMS. (Except rule 1).
-    5. GIBBERISH/OBSCURE DOMAINS: If the root domain is a random string (e.g., 'sajks.com') or unverified acronyms (e.g., 'kvms.org.in'), flag it as phishing. Scammers use cheap domains. Do not assume it is a legitimate local business.
-    
-    DEVIATION RULE: Treat standard clean domains like 'google.com' or 'youtube.com' as 100% SAFE. Only flag as true if the ACTUAL root domain word is modified.
+    APPLY THESE RULES STRICTLY IN THIS ORDER:
+    1. GLOBAL WHITELIST (100% SAFE): If the root domain is exactly 'whatsapp.com', 'google.com', 'devpost.com', 'github.com', 'youtube.com', or 'netlify.app', it is strictly SAFE (is_phishing: false). Subdomains like 'web.whatsapp.com' or 'gemini.google.com' are also strictly SAFE.
+    2. EDUCATIONAL EXCEPTION (100% SAFE): Any domain ending in '.ac.in', '.edu', or '.edu.in' belongs to a legitimate educational institution (e.g., silveroakuni.ac.in). Treat these as strictly SAFE.
+    3. PROJECT WHITELIST (100% SAFE): If the URL contains 'phishguard', it is our own hackathon app and is SAFE.
+    4. ROOT DOMAIN IMPERSONATION (THREAT): If the root domain merges a brand name with other words directly (e.g., 'playimdb.com', 'whatsapp-login-free.com'), it is 100% PHISHING. 
+    5. GOVERNMENT SPOOFING (THREAT): Any domain implying Indian government services MUST end in exactly '.gov.in', '.nic.in'. If it uses '.in', '.com', '.online', it is a High-Threat SCAM.
+    6. FREE HOSTING & GIBBERISH (THREAT): Domains on 'blogspot.com' offering 'free' stuff, or random unverified gibberish root domains (e.g., 'sajks.com') are PHISHING.
 
     Respond ONLY in valid JSON format exactly like this:
-    {{"is_phishing": true or false, "threat_level": "Low/Medium/High", "reason": "Short, expert technical explanation of the specific threat vector identified"}}
+    {{"is_phishing": true or false, "threat_level": "Low/Medium/High", "reason": "Short, expert technical explanation"}}
     """
 
     try:
