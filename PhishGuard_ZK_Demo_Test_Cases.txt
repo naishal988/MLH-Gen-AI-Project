@@ -1,0 +1,42 @@
+=========================================================
+PHISHGUARD ZK - DEMO TEST CASES FOR JUDGES
+=========================================================
+Hello Judges! 
+
+To make your evaluation easier, we have provided the exact 
+test data we used in our demonstration video. Feel free to 
+copy and paste these into our live scanner to see the 
+Zero-Knowledge AI architecture in action.
+
+---------------------------------------------------------
+TEST CASE 1: SAFE URL SCAN (Educational Domain)
+---------------------------------------------------------
+Instructions: Paste this link into the 'URL Scan' tab. 
+Expected Result: 'Safe / Legitimate'
+
+URL to copy:
+https://studentportal.silveroakuni.ac.in/UMSStudents/StudentDashboard.aspx
+
+
+---------------------------------------------------------
+TEST CASE 2: HIGH-THREAT PHISHING EMAIL SCAN
+---------------------------------------------------------
+Instructions: Copy the entire text below (from Subject to 
+Regards) and paste it into the 'Email Text Scan' tab. 
+Expected Result: 'Phishing Detected' with a ZK-Hash generated.
+
+Email text to copy:
+Subject: URGENT: Your HDFC Bank Account Will Be Suspended
+Body:
+Dear Customer,
+We noticed suspicious login attempts on your account from an unrecognized device. For
+your security, your online banking access has been temporarily restricted. To restore your
+access and prevent permanent suspension, you must complete your KYC verification
+immediately.
+Click the secure link below to verify your identity:
+http://hdfc-update-kyc-secure.com/login
+Do not share your OTP with anyone. If you fail to verify within 24 hours, your account will
+be frozen.
+Regards,
+HDFC Security Team
+=========================================================
